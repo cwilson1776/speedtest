@@ -13,12 +13,27 @@ There are some added features to allow some additional details that Ookla provid
 ## Acknowledgements
 This work is based upon forks from:
 
+- [Dave Taddei](https://github.com/davidtaddei/speedtest_ookla-to-influxdbv2)
 - [Qlustor](https://github.com/qlustor/speedtest_ookla-to-influxdb)
 - [breadlysm](https://github.com/breadlysm/speedtest-to-influxdb)
 - [Martin Francois](https://github.com/martinfrancois/speedtest-to-influxdb)
 - [Aiden Gilmartin](https://github.com/aidengilmartin/speedtest-to-influxdb)
 
-My modifications port their hard work to InfluxDB v2.0 and higher.
+My modifications:
+
+- Update to debian bookworm
+- Fixed a bug where the value of DB\_DATABASE was not respected
+- Updated logging messages
+- Enhanced to enable running as non-root:
+  - Must enable CAP_NET_RAW on container
+    - docker command line: `-u $(id -u):$(id -g) --cap-add NET_RAW`
+    - docker compose:
+      ```
+      user: "$PUID:$PGID"
+      cap_add:
+        - NET_RAW
+      ```
+  - Must **not** set `--security-opt no-new-privileges`
 
 ## Preparing InfluxDB
 Before configuring the speedtest container you must prepare a `speedtests` data [bucket](https://docs.influxdata.com/influxdb/v2.0/organizations/buckets/create-bucket/) and bucket token.
@@ -30,7 +45,7 @@ The InfluxDB connection settings are controlled by environment variables.
 
 The variables available are:
 - NAMESPACE = default - None
-- INFLUX_DB_ADDRESS = default - influxdb
+- INFLUX_DB_ADDRESS = default - http://influxdb
 - INFLUX_DB_PORT = default - 8086
 - INFLUX_DB_ORG = default - {blank}
 - INFLUX_DB_TOKEN = default - {blank}
@@ -91,7 +106,7 @@ Be aware that this script will automatically accept the license and GDPR stateme
     -e 'SPEEDTEST_INTERVAL'='5' \
     -e 'SPEEDTEST_FAIL_INTERVAL'='5'  \
     -e 'SPEEDTEST_SERVER_ID'='12746' \
-    qlustor/speedtest_ookla-to-influxdb
+    speedtest
     ```
 ### Run as docker-compose
 1. Configure the supplied `docker-compose.yml` file environment variables

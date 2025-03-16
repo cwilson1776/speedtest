@@ -1,7 +1,4 @@
-version: '3.2'
-
 services:
-
     speedtest:
       container_name: speedtest
       build:
@@ -18,6 +15,9 @@ services:
         SPEEDTEST_FAIL_INTERVAL: 5
         PING_INTERVAL: 60
         TZ: Europe/London
+      # user: "$PUID:$PGID"
+      # cap_add:
+      #   - NET_RAW
       logging:
         driver: json-file
         options:

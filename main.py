@@ -11,7 +11,7 @@ from pythonping import ping
 
 # InfluxDB Settings
 NAMESPACE = os.getenv("NAMESPACE", "None")
-DB_ADDRESS = os.getenv("INFLUX_DB_ADDRESS", "influxdb")
+DB_ADDRESS = os.getenv("INFLUX_DB_ADDRESS", "http://influxdb")
 DB_PORT = int(os.getenv("INFLUX_DB_PORT", "8086"))
 DB_ORG = os.getenv("INFLUX_DB_ORG", "")
 DB_TOKEN = os.getenv("INFLUX_DB_TOKEN", "")
@@ -136,14 +136,20 @@ def format_for_influx(data):
 
     return influx_data
 
+def tsfmt(t: datetime.datetime) -> str:
+    return t.isoformat(timespec='seconds').replace('+00:00','Z')
+
+def nowfmt() -> str:
+    return tsfmt(datetime.datetime.now(datetime.UTC))
 
 def speedtest():
+    local_timestamp = datetime.datetime.now(datetime.UTC)
     if not SERVER_ID:
         speedtest = subprocess.run(
             ["speedtest", "--accept-license", "--accept-gdpr", "-f", "json"],
             capture_output=True,
         )
-        print("Automatic server choice")
+        print(f"{nowfmt()}| Automatic server choice")
     else:
         speedtest = subprocess.run(
             [
@@ -156,13 +162,13 @@ def speedtest():
             ],
             capture_output=True,
         )
-        print("Manual server choice : ID = " + SERVER_ID)
+        print(f"{nowfmt()}| Manual server choice : ID = {SERVER_ID}")
 
     if speedtest.returncode == 0:  # Speedtest was successful.
-        print("Speedtest Successful :")
+        print(f"{nowfmt()}| Speedtest Successful : ")
         data_json = json.loads(speedtest.stdout)
         print(
-            "time: "
+            f"{nowfmt()}| time: "
             + str(data_json["timestamp"])
             + " - ping: "
             + str(data_json["ping"]["latency"])
@@ -183,19 +189,20 @@ def speedtest():
             + ")"
         )
         data = format_for_influx(data_json)
-        write_api.write(bucket="speedtests", record=data)
-        print("Data written to DB successfully")
+        write_api.write(bucket=DB_DATABASE, record=data)
+        print(f"{nowfmt()}| Data written to DB successfully")
     else:  # Speedtest failed.
-        print("Speedtest Failed :")
+        print(f"{nowfmt()}| Speedtest Failed :")
         print(speedtest.stderr)
         print(speedtest.stdout)
+        # time.sleep(TEST_FAIL_INTERVAL)
 
-
-#        time.sleep(TEST_FAIL_INTERVAL)
+    next_test=local_timestamp + datetime.timedelta(seconds=TEST_INTERVAL)
+    print(f"{nowfmt()}| Next speed test in {TEST_INTERVAL / 60} minutes ({tsfmt(next_test)})")
 
 
 def pingtest():
-    timestamp = datetime.datetime.utcnow()
+    timestamp = datetime.datetime.now(datetime.UTC)
     for target in PING_TARGETS.split(","):
         target = target.strip()
         pingtest = ping(target, verbose=False, timeout=1, count=1, size=128)
@@ -213,7 +220,10 @@ def pingtest():
             .tag("namespace", NAMESPACE)
             .tag("target", target)
         )
-        write_api.write(bucket="speedtests", record=data)
+        print(f"{nowfmt()}| ping test: {target} {'OK' if success else 'ERROR'} {rtt=}")
+        write_api.write(bucket=DB_DATABASE, record=data)
+    next_ping=timestamp + datetime.timedelta(seconds=PING_INTERVAL)
+    print(f"{nowfmt()}| Next ping test in {PING_INTERVAL / 60} minutes ({tsfmt(next_ping)})")
 
 
 def main():
@@ -244,5 +254,5 @@ def main():
 
 
 if __name__ == "__main__":
-    print("Speedtest CLI data logger to InfluxDB started...")
+    print(f"{nowfmt()}| Speedtest CLI data logger to InfluxDB started...")
     main()
