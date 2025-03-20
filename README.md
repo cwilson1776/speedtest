@@ -34,6 +34,9 @@ My modifications:
         - NET_RAW
       ```
   - Must **not** set `--security-opt no-new-privileges`
+- Added another dashboard configuration. This one uses Flux-based
+  queries rather than InfluxQL, so configure the database connection
+  accordingly.
 
 ## Preparing InfluxDB
 Before configuring the speedtest container you must prepare a `speedtests` data [bucket](https://docs.influxdata.com/influxdb/v2.0/organizations/buckets/create-bucket/) and bucket token.
