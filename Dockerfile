@@ -12,6 +12,7 @@ RUN apt-get update \
         gnupg1 \
         iputils-ping \
         libcap2-bin \
+        procps \
     && apt-get -q -y autoremove && apt-get -q -y clean \
     && rm -rf /var/lib/apt/lists/
 
